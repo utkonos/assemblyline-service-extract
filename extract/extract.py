@@ -1997,38 +1997,35 @@ class Extract(ServiceBase):
 
         output_files = list()
 
-        output_path1 = os.path.join(self.working_directory, "SETUP.nsi")
+        output_path1 = pathlib.Path(self.working_directory).joinpath("SETUP.nsi")
         try:
             extractor = NSIExtractor.from_path(request.file_path)
             extractor.generate_setup_file()
-            extractor.save_setup_file(output_path1)
+            extractor.save_setup_file(str(output_path1))
         except Exception:
             # The NSIS Setup.nsi file extraction is a best effort
             pass
         else:
-            output_files.append([output_path1, "SETUP.nsi", sys._getframe().f_code.co_name])
+            output_files.append([str(output_path1), "SETUP.nsi", sys._getframe().f_code.co_name])
 
-        output_path2 = os.path.join(self.working_directory, "setup.bin")
-        out = pathlib.Path(output_path2)
+        output_path2 = pathlib.Path(self.working_directory).joinpath("setup.bin")
         data = pathlib.Path(request.file_path).read_bytes()
         nf = rensis.core.NSISFile(data)
         nf.run()
         if nf.script_bin:
-            out.write_bytes(nf.script_bin)
-            if out.file_exists():
-                output_files.append([output_path2, "setup.bin", sys._getframe().f_code.co_name])
+            output_path2.write_bytes(nf.script_bin)
+            if output_path2.file_exists():
+                output_files.append([str(output_path2), "setup.bin", sys._getframe().f_code.co_name])
 
-        output_path3 = os.path.join(self.working_directory, "setup.nsis")
-        out = pathlib.Path(output_path3)
+        output_path3 = pathlib.Path(self.working_directory).joinpath("setup.nsis")
         xt = xtnsis.xtnsis()
         for up in xt.unpack(data):
             filename = up.path.split('\\')[-1]
             if filename == 'setup.nsis':
-                outout_data = up.get_data()
-                if outout_data:
-                    out.write_bytes(outout_data)
-                    if out.file_exists():
-                        output_files.append([output_path3, "setup.nsis", sys._getframe().f_code.co_name])
+                if output_data := up.get_data():
+                    output_path3.write_bytes(output_data)
+                    if output_path3.file_exists():
+                        output_files.append([str(output_path3), "setup.nsis", sys._getframe().f_code.co_name])
 
         return output_files
 
