@@ -9,6 +9,7 @@ msoffcrypto-tool
 html5lib
 pikepdf
 https://github.com/gdesmar/nrs/archive/nsi-script.zip
+rensis
 debloat==1.6.1
 zstandard
 autoit-ripper

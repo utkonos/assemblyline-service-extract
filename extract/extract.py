@@ -26,6 +26,7 @@ import mobi
 import msoffcrypto
 import olefile
 import pefile
+import rensis.core
 import sfextract
 import sfextract.setupfactory7
 import sfextract.setupfactory8
@@ -1993,16 +1994,30 @@ class Extract(ServiceBase):
             or a blank list if extract failed
         """
 
-        output_path = os.path.join(self.working_directory, "SETUP.nsi")
+        output_files = list()
+
+        output_path1 = os.path.join(self.working_directory, "SETUP.nsi")
         try:
             extractor = NSIExtractor.from_path(request.file_path)
             extractor.generate_setup_file()
-            extractor.save_setup_file(output_path)
+            extractor.save_setup_file(output_path1)
         except Exception:
             # The NSIS Setup.nsi file extraction is a best effort
-            return []
+            pass
+        else:
+            output_files.append([output_path1, "SETUP.nsi", sys._getframe().f_code.co_name])
 
-        return [[output_path, "SETUP.nsi", sys._getframe().f_code.co_name]]
+        output_path2 = os.path.join(self.working_directory, "setup.bin")
+        out = pathlib.Path(output_path2)
+        data = pathlib.Path(request.file_path).read_bytes()
+        nf = rensis.core.NSISFile(data)
+        nf.run()
+        if nf.script_bin:
+            out.write_bytes(nf.script_bin)
+            if out.file_exists():
+                output_files.append([output_path2, "setup.bin", sys._getframe().f_code.co_name])
+
+        return output_files
 
     def extract_tnef(self, request: ServiceRequest):
         """Will attempt to extract data from a TNEF container.
