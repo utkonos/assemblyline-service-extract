@@ -62,6 +62,7 @@ from nrs.nsi.extractor import Extractor as NSIExtractor
 from pikepdf import PasswordError as PDFPasswordError
 from pikepdf import Pdf, PdfError
 from refinery.units.formats.ifps import IFPSFile
+import refinery.units.formats.archive.xtnsis as xtnsis
 
 from extract.ext import py2exe_extractor, py_decompylepp, py_uncompyle6, pyinstaller
 from extract.ext.repair_zip import BadZipfile, RepairZip
@@ -2016,6 +2017,18 @@ class Extract(ServiceBase):
             out.write_bytes(nf.script_bin)
             if out.file_exists():
                 output_files.append([output_path2, "setup.bin", sys._getframe().f_code.co_name])
+
+        output_path3 = os.path.join(self.working_directory, "setup.nsis")
+        out = pathlib.Path(output_path3)
+        xt = xtnsis.xtnsis()
+        for up in xt.unpack(data):
+            filename = up.path.split('\\')[-1]
+            if filename == 'setup.nsis':
+                outout_data = up.get_data()
+                if outout_data:
+                    out.write_bytes(outout_data)
+                    if out.file_exists():
+                        output_files.append([output_path3, "setup.nsis", sys._getframe().f_code.co_name])
 
         return output_files
 
