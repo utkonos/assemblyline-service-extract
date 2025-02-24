@@ -1,5 +1,6 @@
 import base64
 import binascii
+import contextlib
 import hashlib
 import itertools
 import json
@@ -1998,34 +1999,34 @@ class Extract(ServiceBase):
         output_files = list()
 
         output_path1 = pathlib.Path(self.working_directory).joinpath("SETUP.nsi")
-        try:
+        with contextlib.suppress(Exception):
             extractor = NSIExtractor.from_path(request.file_path)
             extractor.generate_setup_file()
             extractor.save_setup_file(str(output_path1))
-        except Exception:
-            # The NSIS Setup.nsi file extraction is a best effort
-            pass
-        else:
+        if output_path1.file_exists():
             output_files.append([str(output_path1), "SETUP.nsi", sys._getframe().f_code.co_name])
 
         output_path2 = pathlib.Path(self.working_directory).joinpath("setup.bin")
         data = pathlib.Path(request.file_path).read_bytes()
-        nf = rensis.core.NSISFile(data)
-        nf.run()
-        if nf.script_bin:
-            output_path2.write_bytes(nf.script_bin)
-            if output_path2.file_exists():
-                output_files.append([str(output_path2), "setup.bin", sys._getframe().f_code.co_name])
+        with contextlib.suppress(Exception):
+            nf = rensis.core.NSISFile(data)
+            nf.run()
+            if nf.script_bin:
+                output_path2.write_bytes(nf.script_bin)
+        if output_path2.file_exists():
+            output_files.append([str(output_path2), "setup.bin", sys._getframe().f_code.co_name])
 
         output_path3 = pathlib.Path(self.working_directory).joinpath("setup.nsis")
         xt = xtnsis.xtnsis()
-        for up in xt.unpack(data):
-            filename = up.path.split('\\')[-1]
-            if filename == 'setup.nsis':
-                if output_data := up.get_data():
-                    output_path3.write_bytes(output_data)
-                    if output_path3.file_exists():
-                        output_files.append([str(output_path3), "setup.nsis", sys._getframe().f_code.co_name])
+        with contextlib.suppress(Exception):
+            for up in xt.unpack(data):
+                filename = up.path.split('\\')[-1]
+                if filename == 'setup.nsis':
+                    if output_data := up.get_data():
+                        output_path3.write_bytes(output_data)
+                        break
+        if output_path3.file_exists():
+            output_files.append([str(output_path3), "setup.nsis", sys._getframe().f_code.co_name])
 
         return output_files
 
