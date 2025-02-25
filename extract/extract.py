@@ -2003,7 +2003,7 @@ class Extract(ServiceBase):
             extractor = NSIExtractor.from_path(request.file_path)
             extractor.generate_setup_file()
             extractor.save_setup_file(str(output_path1))
-        if output_path1.file_exists():
+        if output_path1.exists():
             output_files.append([str(output_path1), "SETUP.nsi", sys._getframe().f_code.co_name])
 
         output_path2 = pathlib.Path(self.working_directory).joinpath("setup.bin")
@@ -2013,7 +2013,7 @@ class Extract(ServiceBase):
             nf.run()
             if nf.script_bin:
                 output_path2.write_bytes(nf.script_bin)
-        if output_path2.file_exists():
+        if output_path2.exists():
             output_files.append([str(output_path2), "setup.bin", sys._getframe().f_code.co_name])
 
         output_path3 = pathlib.Path(self.working_directory).joinpath("setup.nsis")
@@ -2025,7 +2025,7 @@ class Extract(ServiceBase):
                     if output_data := up.get_data():
                         output_path3.write_bytes(output_data)
                         break
-        if output_path3.file_exists():
+        if output_path3.exists():
             output_files.append([str(output_path3), "setup.nsis", sys._getframe().f_code.co_name])
 
         return output_files
