@@ -1,5 +1,6 @@
 import base64
 import binascii
+import contextlib
 import hashlib
 import itertools
 import json
@@ -26,6 +27,7 @@ import mobi
 import msoffcrypto
 import olefile
 import pefile
+import rensis.core
 import sfextract
 import sfextract.setupfactory7
 import sfextract.setupfactory8
@@ -63,6 +65,7 @@ from pikepdf import Pdf, PdfError
 from refinery.lib.inno.archive import InnoArchive
 from refinery.lib.inno.emulator import InnoSetupEmulator, NewPassword
 from refinery.lib.inno.ifps import IFPSFile
+import refinery.units.formats.archive.xtnsis as xtnsis
 
 from extract.ext import py2exe_extractor, py_decompylepp, py_uncompyle6, pyinstaller
 from extract.ext.repair_zip import BadZipfile, RepairZip
@@ -2035,16 +2038,39 @@ class Extract(ServiceBase):
             or a blank list if extract failed
         """
 
-        output_path = os.path.join(self.working_directory, "SETUP.nsi")
-        try:
+        output_files = list()
+
+        output_path1 = pathlib.Path(self.working_directory).joinpath("SETUP.nsi")
+        with contextlib.suppress(Exception):
             extractor = NSIExtractor.from_path(request.file_path)
             extractor.generate_setup_file()
-            extractor.save_setup_file(output_path)
-        except Exception:
-            # The NSIS Setup.nsi file extraction is a best effort
-            return []
+            extractor.save_setup_file(str(output_path1))
+        if output_path1.exists():
+            output_files.append([str(output_path1), "SETUP.nsi", sys._getframe().f_code.co_name])
 
-        return [[output_path, "SETUP.nsi", sys._getframe().f_code.co_name]]
+        output_path2 = pathlib.Path(self.working_directory).joinpath("setup.bin")
+        data = pathlib.Path(request.file_path).read_bytes()
+        with contextlib.suppress(Exception):
+            nf = rensis.core.NSISFile(data)
+            nf.run()
+            if nf.script_bin:
+                output_path2.write_bytes(nf.script_bin)
+        if output_path2.exists():
+            output_files.append([str(output_path2), "setup.bin", sys._getframe().f_code.co_name])
+
+        output_path3 = pathlib.Path(self.working_directory).joinpath("setup.nsis")
+        xt = xtnsis.xtnsis()
+        with contextlib.suppress(Exception):
+            for up in xt.unpack(data):
+                filename = up.path.split('\\')[-1]
+                if filename == 'setup.nsis':
+                    if output_data := up.get_data():
+                        output_path3.write_bytes(output_data)
+                        break
+        if output_path3.exists():
+            output_files.append([str(output_path3), "setup.nsis", sys._getframe().f_code.co_name])
+
+        return output_files
 
     def extract_tnef(self, request: ServiceRequest):
         """Will attempt to extract data from a TNEF container.
