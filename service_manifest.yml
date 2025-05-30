@@ -244,6 +244,6 @@ heuristics:
       is trending towards suspicious.
 
 docker_config:
-  image: ${REGISTRY}cccs/assemblyline-service-extract:$SERVICE_TAG
+  image: ${REGISTRY}utkonos/assemblyline-service-extract:$SERVICE_TAG
   cpu_cores: 1.0
   ram_mb: 1024
