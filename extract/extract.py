@@ -2040,13 +2040,13 @@ class Extract(ServiceBase):
 
         output_files = list()
 
-        output_path1 = pathlib.Path(self.working_directory).joinpath("SETUP.nsi")
+        output_path1 = pathlib.Path(self.working_directory).joinpath("FOO.nsi")
         with contextlib.suppress(Exception):
             extractor = NSIExtractor.from_path(request.file_path)
             extractor.generate_setup_file()
             extractor.save_setup_file(str(output_path1))
         if output_path1.exists():
-            output_files.append([str(output_path1), "SETUP.nsi", sys._getframe().f_code.co_name])
+            output_files.append([str(output_path1), "FOO.nsi", sys._getframe().f_code.co_name])
 
         output_path2 = pathlib.Path(self.working_directory).joinpath("setup.bin")
         data = pathlib.Path(request.file_path).read_bytes()
