@@ -2040,23 +2040,22 @@ class Extract(ServiceBase):
 
         output_files = list()
 
-        output_path1 = pathlib.Path(self.working_directory).joinpath("FOO.nsi")
+        output_path1 = pathlib.Path(self.working_directory).joinpath("SETUP.nsi")
         with contextlib.suppress(Exception):
             extractor = NSIExtractor.from_path(request.file_path)
             extractor.generate_setup_file()
             extractor.save_setup_file(str(output_path1))
         if output_path1.exists():
-            output_files.append([str(output_path1), "FOO.nsi", sys._getframe().f_code.co_name])
+            output_files.append([str(output_path1), output_path1.name, sys._getframe().f_code.co_name])
 
         output_path2 = pathlib.Path(self.working_directory).joinpath("setup.bin")
         data = pathlib.Path(request.file_path).read_bytes()
-        with contextlib.suppress(Exception):
-            nf = rensis.core.NSISFile(data)
-            nf.run()
-            if nf.script_bin:
-                output_path2.write_bytes(nf.script_bin)
+        nf = rensis.core.NSISFile(data)
+        nf.run()
+        if nf.script_bin:
+            output_path2.write_bytes(nf.script_bin)
         if output_path2.exists():
-            output_files.append([str(output_path2), "setup.bin", sys._getframe().f_code.co_name])
+            output_files.append([str(output_path2), output_path2.name, sys._getframe().f_code.co_name])
 
         output_path3 = pathlib.Path(self.working_directory).joinpath("setup.nsis")
         xt = xtnsis.xtnsis()
@@ -2068,7 +2067,7 @@ class Extract(ServiceBase):
                         output_path3.write_bytes(output_data)
                         break
         if output_path3.exists():
-            output_files.append([str(output_path3), "setup.nsis", sys._getframe().f_code.co_name])
+            output_files.append([str(output_path3), output_path3.name, sys._getframe().f_code.co_name])
 
         return output_files
 
