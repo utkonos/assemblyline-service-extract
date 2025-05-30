@@ -2050,6 +2050,8 @@ class Extract(ServiceBase):
 
         output_path2 = pathlib.Path(self.working_directory).joinpath("setup.bin")
         data = pathlib.Path(request.file_path).read_bytes()
+        foobar = hashlib.sha256(data).hexdigest()
+        raise RuntimeError(f'{foobar} {request.file_path}')
         nf = rensis.core.NSISFile(data)
         nf.run()
         if nf.script_bin:
