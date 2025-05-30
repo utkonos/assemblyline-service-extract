@@ -1,6 +1,5 @@
 import base64
 import binascii
-import contextlib
 import hashlib
 import itertools
 import json
@@ -404,6 +403,9 @@ class Extract(ServiceBase):
             if request.file_type.startswith("executable/windows/pe"):
                 inno_extracted, password_protected = self.extract_innosetup(request)
                 extracted.extend(inno_extracted)
+
+                nsis_extracted = self.extract_nsis_pe(request)
+                extracted.extend(nsis_extracted)
 
             if not extracted:
                 extracted, zip_password_protected = self.extract_zip(request, request.file_path, request.file_type)
@@ -2038,38 +2040,49 @@ class Extract(ServiceBase):
             or a blank list if extract failed
         """
 
-        output_files = list()
-
-        output_path1 = pathlib.Path(self.working_directory).joinpath("SETUP.nsi")
-        with contextlib.suppress(Exception):
+        output_path = os.path.join(self.working_directory, "SETUP.nsi")
+        try:
             extractor = NSIExtractor.from_path(request.file_path)
             extractor.generate_setup_file()
-            extractor.save_setup_file(str(output_path1))
-        if output_path1.exists():
-            output_files.append([str(output_path1), output_path1.name, sys._getframe().f_code.co_name])
+            extractor.save_setup_file(output_path)
+        except Exception:
+            # The NSIS Setup.nsi file extraction is a best effort
+            return []
 
-        output_path2 = pathlib.Path(self.working_directory).joinpath("setup.bin")
+        return [[output_path, "SETUP.nsi", sys._getframe().f_code.co_name]]
+
+    def extract_nsis_pe(self, request: ServiceRequest):
+        """Will attempt to extract data from an NSIS executable.
+
+        Args:
+            request: AL request object.
+
+        Returns:
+            List containing extracted file information, including: extracted path and display name,
+            or a blank list if extract failed
+        """
+
+        output_files = list()
+
+        output_path1 = pathlib.Path(self.working_directory).joinpath("setup.bin")
         data = pathlib.Path(request.file_path).read_bytes()
-        foobar = hashlib.sha256(data).hexdigest()
-        raise RuntimeError(f'{foobar} {request.file_path}')
         nf = rensis.core.NSISFile(data)
         nf.run()
         if nf.script_bin:
-            output_path2.write_bytes(nf.script_bin)
+            output_path1.write_bytes(nf.script_bin)
+        if output_path1.exists():
+            output_files.append([str(output_path1), output_path1.name, sys._getframe().f_code.co_name])
+
+        output_path2 = pathlib.Path(self.working_directory).joinpath("setup.nsis")
+        xt = xtnsis.xtnsis()
+        for up in xt.unpack(data):
+            filename = up.path.split('\\')[-1]
+            if filename == 'setup.nsis':
+                if output_data := up.get_data():
+                    output_path2.write_bytes(output_data)
+                    break
         if output_path2.exists():
             output_files.append([str(output_path2), output_path2.name, sys._getframe().f_code.co_name])
-
-        output_path3 = pathlib.Path(self.working_directory).joinpath("setup.nsis")
-        xt = xtnsis.xtnsis()
-        with contextlib.suppress(Exception):
-            for up in xt.unpack(data):
-                filename = up.path.split('\\')[-1]
-                if filename == 'setup.nsis':
-                    if output_data := up.get_data():
-                        output_path3.write_bytes(output_data)
-                        break
-        if output_path3.exists():
-            output_files.append([str(output_path3), output_path3.name, sys._getframe().f_code.co_name])
 
         return output_files
 
